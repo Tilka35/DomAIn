@@ -11,9 +11,10 @@ from dotenv import load_dotenv
 load_dotenv() 
 
 # Imports and Libraries
-import requests, os, subprocess, platform, constant, csv
+import requests, os, subprocess, platform, constant, csv, time, sys
 from nested_lookup import nested_lookup
 from datetime import datetime
+from colorama import init, Fore, Style
 
 # LangChain and HuggingFace imports
 from langchain_community.llms import HuggingFaceEndpoint
@@ -23,14 +24,55 @@ from typing import List
 from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_core.output_parsers import JsonOutputParser
 
+# Format for Starting message and colours
+def starting_message(text, color=Fore.GREEN, delay=0.02):
+    for char in text:
+        sys.stdout.write(color + char)
+        sys.stdout.flush()
+        time.sleep(delay)
+    print(Style.RESET_ALL)
+    time.sleep(2.5)
+
+def format_output(text, delay=0.05):
+    for char in text:
+        sys.stdout.write(char)
+        sys.stdout.flush()
+        time.sleep(delay)
+    print(Style.RESET_ALL)
+    time.sleep(0.5)
+
 # Method to Check what Operating System the tool is running on
 def check_system_run_netstat():
+    
+    # Reset colour after print
+    init(autoreset=True)
+    
+    print("""
+                    
+░███████                                 ░███    ░██████           
+░██   ░██                               ░██░██     ░██             
+░██    ░██  ░███████  ░█████████████   ░██  ░██    ░██  ░████████  
+░██    ░██ ░██    ░██ ░██   ░██   ░██ ░█████████   ░██  ░██    ░██ 
+░██    ░██ ░██    ░██ ░██   ░██   ░██ ░██    ░██   ░██  ░██    ░██ 
+░██   ░██  ░██    ░██ ░██   ░██   ░██ ░██    ░██   ░██  ░██    ░██ 
+░███████    ░███████  ░██   ░██   ░██ ░██    ░██ ░██████░██    ░██ 
+                                                                   """)
+    print("written by @Tilka35")
+    print("https://github.com/Tilka35/DomAIn\n")
+    
+    ## Display starting message
+    starting_message("Starting DomAIn Connection Scanner...\n") #test
+    starting_message("Loading LLM Modules...\n") #test
+    time.sleep(10)
+    
+    # Perform System Check
     system_os = platform.system()
     netstat_command = ['netstat', '-ano']
     # Check if platform is Windows or Linux
     if system_os in ["Windows", "Linux"]:
         # Run tool and capture the output for later use
         try:
+            starting_message("Running Scan...\n")
             netstat_command_output = subprocess.run(netstat_command, capture_output=True, text=True)
         except subprocess.CalledProcessError as e:
             print(f"Error running Netstat command {netstat_command}: ", e)
@@ -53,7 +95,7 @@ def parse_output(output):
     # Iterate over each line in the output
     for line in lines:
         # Output each line to the cli - comment to reduce output
-        print("Processing Line: ", line)
+        #print("Processing Line: ", line)
         # Split by whitespace
         fields = line.split()
         # TCP connections
@@ -136,7 +178,7 @@ def read_ip_address(filename):
                     # Split IP and port and add to list
                     stripped_ip_address = ip_and_port.split(":")[0]
                     ip_addresses.append(stripped_ip_address)
-                    ip_addresses.append("31.28.27.105")     # Test           
+                    ip_addresses.append("31.28.27.105")     # Test for malicious address
     # Return list
     return ip_addresses
 
@@ -145,13 +187,14 @@ def virustotal_query(ip_address):
     
     # IP Address Report
     url = f"https://www.virustotal.com/api/v3/ip_addresses/{ip_address}"
-    headers = {"x-apikey": constant.vt_api_key, "accept": "application/json"}
+    headers = {"x-apikey": constant.VT_API_KEY, "accept": "application/json"}
     response = requests.get(url, headers=headers)
+    time.sleep(2) # Waiiiittttt
     #print(response.status_code)
     
     # Check if there is a response
     if response.status_code == 200:
-        print("Response Status Code: ", response.status_code, "- Successful!")
+        format_output("Response Status Code: ", response.status_code, "- Successful!")
         print("\n")
         return response.json()
     # Not Successful, print error message
@@ -186,7 +229,7 @@ def main():
     ip_addresses = read_ip_address(filename)
     # Loop through each address
     for ip in ip_addresses:
-        print(f"Checking IP address: {ip} ...")
+        format_output(f"Checking IP address: {ip} ...")
         # Query VT with each address
         response = virustotal_query(ip)
         filtered_results = {}
@@ -246,3 +289,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    print("test")
