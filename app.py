@@ -25,21 +25,22 @@ from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_core.output_parsers import JsonOutputParser
 
 # Format for Starting message and colours
-def starting_message(text, color=Fore.GREEN, delay=0.02):
+def green_output(text, color=Fore.GREEN, delay=0.01):
     for char in text:
         sys.stdout.write(color + char)
         sys.stdout.flush()
         time.sleep(delay)
     print(Style.RESET_ALL)
-    time.sleep(2.5)
+    #time.sleep(2.5)
 
-def format_output(text, delay=0.05):
+# Format for 
+def format_output(text, delay=0.01):
     for char in text:
         sys.stdout.write(char)
         sys.stdout.flush()
         time.sleep(delay)
     print(Style.RESET_ALL)
-    time.sleep(0.5)
+    #time.sleep(0.5)
 
 # Method to Check what Operating System the tool is running on
 def check_system_run_netstat():
@@ -61,9 +62,9 @@ def check_system_run_netstat():
     print("https://github.com/Tilka35/DomAIn\n")
     
     ## Display starting message
-    starting_message("Starting DomAIn Connection Scanner...\n") #test
-    starting_message("Loading LLM Modules...\n") #test
-    time.sleep(10)
+    green_output("Starting DomAIn Connection Scanner...\n") #test
+    green_output("Loading LLM Modules...\n") #test
+    #time.sleep(10)
     
     # Perform System Check
     system_os = platform.system()
@@ -72,7 +73,7 @@ def check_system_run_netstat():
     if system_os in ["Windows", "Linux"]:
         # Run tool and capture the output for later use
         try:
-            starting_message("Running Scan...\n")
+            green_output("Running Scan...\n")
             netstat_command_output = subprocess.run(netstat_command, capture_output=True, text=True)
         except subprocess.CalledProcessError as e:
             print(f"Error running Netstat command {netstat_command}: ", e)
@@ -170,6 +171,7 @@ def read_ip_address(filename):
     # Open and read CSV file
     with open(filepath, 'r') as file:
         reader = csv.reader(file)
+        next(reader) # skip first line
         for row in reader:
             if row: # Check row is not empty
                 # Strip port numbers and colons
@@ -190,12 +192,13 @@ def virustotal_query(ip_address):
     url = f"https://www.virustotal.com/api/v3/ip_addresses/{ip_address}"
     headers = {"x-apikey": constant.VT_API_KEY, "accept": "application/json"}
     response = requests.get(url, headers=headers)
-    time.sleep(2) # Waiiiittttt
+    #time.sleep(2) # Waiiiittttt
     #print(response.status_code)
     
     # Check if there is a response
     if response.status_code == 200:
-        format_output("Response Status Code: ", response.status_code, "- Successful!")
+        print("Response Status Code: ", response.status_code, "- Successful!")
+        #time.sleep(0.5)
         print("\n")
         return response.json()
     # Not Successful, print error message
@@ -230,7 +233,7 @@ def main():
     ip_addresses = read_ip_address(filename)
     # Loop through each address
     for ip in ip_addresses:
-        format_output(f"Checking IP address: {ip} ...")
+        green_output(f"Checking IP address: {ip} ...")
         # Query VT with each address
         response = virustotal_query(ip)
         filtered_results = {}
