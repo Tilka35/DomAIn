@@ -206,7 +206,7 @@ def virustotal_query(ip_address):
         error_message = response.json().get("Error", {}).get("Message")
         if error_message == "Resource not found.":
             print(f"No information found on IP Address from VirusTotal about: {ip_address}")
-        # Unknown Error
+        # Unknown Error # test commit
         else:
             print(f"Unknown Error: {error_message}")
         return None
