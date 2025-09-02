@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv() 
 
 # Imports and Libraries
-import requests, os, subprocess, platform, constant, csv, time, sys
+import requests, os, subprocess, platform, constant, csv, time, sys, json
 from nested_lookup import nested_lookup
 from datetime import datetime
 from colorama import init, Fore, Style
@@ -33,7 +33,7 @@ def green_output(text, color=Fore.GREEN, delay=0.01):
     print(Style.RESET_ALL)
     #time.sleep(2.5)
 
-# Format for 
+# Format for other text
 def format_output(text, delay=0.01):
     for char in text:
         sys.stdout.write(char)
@@ -181,7 +181,7 @@ def read_ip_address(filename):
                     # Split IP and port and add to list
                     stripped_ip_address = ip_and_port.split(":")[0]
                     ip_addresses.append(stripped_ip_address)
-                    ip_addresses.append("31.28.27.105")     # Test for malicious address
+                    #ip_addresses.append("31.28.27.105")     # Test for malicious address
     # Return list
     return ip_addresses
 
@@ -214,7 +214,89 @@ def virustotal_query(ip_address):
     else:
         print(f"Error accessing VirusTotal API for IP Address {ip_address}. Status Code: {response.status_code}")
         return None
-
+    
+# Export Results to JSON
+def export_to_json(data):
+    # Timestamp the JSON file
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+    filename = f"domAIn-json-report-{timestamp}.csv"
+    # Generate JSON report
+    try:
+        with open(filename, "w") as f:
+            json.dump(data, f, indent=4)
+        cwd = os.getcwd()    
+        print(f"Exported JSON Report to {cwd}{filename}")
+    except Exception as e:
+        print(f"Failed to Export JSON: {e}")
+        
+# Export results to HTML Dashboard
+def generate_html_dashboard(data):
+    # Timestamp the HTML file
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+    filename = f"domAIn-dashboard-{timestamp}.html"
+    
+    # Generate HTML Dashboard
+    try:
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>VirusTotal IP Report</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }}
+                h1 {{ color: #333; }}
+                .attribute {{ margin-bottom: 15px; padding: 10px; background: #fff; border-radius: 5px; }}
+                .label {{ font-weight: bold; color: #555; }}
+                .malicious {{ color: red; font-weight: bold; }}
+                .suspicious {{ color: orange; font-weight: bold; }}
+                .clean {{ color: green; font-weight: bold; }}
+            </style>
+        </head>
+        <body>
+            <h1>VirusTotal Report for IP</h1>
+        """
+        for key, value in data.items():
+            if key == "last_analysis_stats":
+                stats = value[0] if isinstance(value, list) and value else {}
+                malicious = stats.get("malicious", 0)
+                suspicious = stats.get("suspicious", 0)
+                
+                if malicious > 0:
+                    status = f"<span class='malicious'> MALICIOUS</span>"
+                elif suspicious > 0:
+                    status = f"<span class='suspicious'> SUSPICIOUS, FURTHER ANALYSIS REQUIRED</span>"
+                else:
+                    status = f"<span class='clean'> CLEAN</span>"
+                    
+                html_content += f"""
+                    <div class="attribute">
+                        <div class="label">{key}:</div>
+                        {status}<br>
+                        <pre>{json.dumps(stats, indent=2)}</pre>
+                    </div>
+                """
+            else:
+                formatted_value = value[0] if isinstance(value, list) and value else value
+                html_content += f"""
+                    <div class="attribute">
+                        <div class="label">{key}:</div>
+                        {formatted_value}
+                    </div>
+                """
+        html_content += """
+        </body>
+        </html>
+        """
+        
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(html_content)
+            cwd = os.getcwd()
+        print(f"HTML Dashboard saved to {cwd}{filename}")
+    
+    except Exception as e:
+        print(f"Failed to Generate HTML Report: {e}")
+    
+    
 # Main Method
 def main():
     # Run Netstat        
@@ -229,7 +311,7 @@ def main():
     # Get List of IP addresses from CSV file
     filename = [file for file in os.listdir(".") if file.startswith("netstat_output")][0]
     
-    # Check for malicious IP addresses
+    # Check for malicious IP addresses - This gets outputted to user as of now
     ip_addresses = read_ip_address(filename)
     # Loop through each address
     for ip in ip_addresses:
@@ -276,11 +358,14 @@ def main():
                     print(f"{BOLD}Stats{RESET} {stats}")
                 else:
                     formatted_value = value[0] if isinstance(value, list) and value else value
-                    print(f"{BOLD}{attribute}:{RESET} {value}")
+                    print(f"{BOLD}{attribute}:{RESET} {formatted_value}\n")
                     
                 # print(attribute, nested_lookup(attribute, response["data"]["attributes"]))
                 # filtered_results[attribute]=nested_lookup(attribute, response["data"]["attributes"])
-            print("\n")    
+            print("\n")
+            
+    export_to_json(filtered_results)
+    generate_html_dashboard(filtered_results)  
     
     # Call model to parse and explain data from VirusTotal API
     hub = HuggingFaceEndpoint(repo_id="mistralai/Mistral-7B-Instruct-v0.2")
