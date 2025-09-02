@@ -234,17 +234,52 @@ def main():
     # Loop through each address
     for ip in ip_addresses:
         green_output(f"Checking IP address: {ip} ...")
+        # ANSI escape sequences for formatting
+        BOLD = '\033[1m'
+        RESET = '\033[0m'
+        GREEN = '\033[92m'
+        YELLOW = '\033[93m'
+        RED = '\033[91m'
+        CYAN = '\033[96m'
         # Query VT with each address
         response = virustotal_query(ip)
         filtered_results = {}
         if response:
-            print("VirusTotal report:")
+            print(f"{BOLD}VirusTotal report for IP:{RESET} {CYAN}{ip}{RESET}\n")
             
-            selected_attributes = ["whois","whois_date","last_analysis_date", "as_owner", "regional_internet_registry", "asn", "continent", "country", "cert_signature", "subject_alternative_name", "public_key", "thumbprint_sha256", "issuer", "subject", "last_analysis_stats"]
-            filtered_results = {}
+            selected_attributes = [
+                "whois","whois_date","last_analysis_date", "as_owner", "regional_internet_registry", "asn", "continent", "country", "cert_signature", "subject_alternative_name", "public_key", "thumbprint_sha256", "issuer", "subject", "last_analysis_stats"
+            ]
+            
+            attributes_data = response["data"]["attributes"] #
+            #filtered_results = {}
             for attribute in selected_attributes:
-                print(attribute, nested_lookup(attribute, response["data"]["attributes"]))
-                filtered_results[attribute]=nested_lookup(attribute, response["data"]["attributes"])
+                value = nested_lookup(attribute, attributes_data)
+                filtered_results[attribute] = value
+                #Threat levels
+                if attribute == "last_analysis_stats":
+                    stats = value[0] if value else {}
+                    malicious = stats.get("malicious", 0)
+                    suspicious = stats.get("suspicious", 0)
+                    
+                    if malicious > 0:
+                        threat_colour = RED
+                        threat_label = "MALICIOUS"
+                    elif suspicious > 0:
+                        threat_colour = YELLOW
+                        threat_label = "SUSPICIOUS, ANALYSE FURTHER"
+                    else:
+                        threat_colour = GREEN
+                        threat_label = "CLEAN"
+                    
+                    print(f"{BOLD}{attribute}:{RESET} {threat_colour}{threat_label}{RESET}")
+                    print(f"{BOLD}Stats{RESET} {stats}")
+                else:
+                    formatted_value = value[0] if isinstance(value, list) and value else value
+                    print(f"{BOLD}{attribute}:{RESET} {value}")
+                    
+                # print(attribute, nested_lookup(attribute, response["data"]["attributes"]))
+                # filtered_results[attribute]=nested_lookup(attribute, response["data"]["attributes"])
             print("\n")    
     
     # Call model to parse and explain data from VirusTotal API
